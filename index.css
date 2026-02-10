@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --color-rotary-blue: #013a7c;
+  --color-rotary-gold: #f7a81b;
+  --font-sans: Inter, ui-sans-serif, system-ui;
+  --shadow-soft: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-heavy: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Your existing styles */
+body { font-family: 'Inter', sans-serif; }
+
+.glass {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+}
+
+.bg-rotary-blue { background-color: #013a7c; }
+.text-rotary-blue { color: #013a7c; }
+.bg-rotary-gold { background-color: #f7a81b; }
+.border-rotary-gold { border-color: #f7a81b; }
+
+/* Global override */
+input, textarea, select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+input::placeholder, textarea::placeholder {
+  color: #94a3b8 !important;
+}
