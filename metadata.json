@@ -1,0 +1,7 @@
+{
+  "name": "Copy of GiveGoa ERP - Rotary Club of Panjim",
+  "description": "A centralized resource allocation and social impact management ERP for the Rotary Club of Panjim. Features AI-powered request classification, priority scoring, resource optimization, and impact tracking.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
