@@ -9,6 +9,29 @@ const AuditLog: React.FC = () => {
     logsApi.getAll().then((res) => setLogs(res.logs)).catch(() => setLogs([]));
   }, []);
 
+  const exportToCsv = () => {
+    if (logs.length === 0) {
+      alert('No logs to export.');
+      return;
+    }
+    const headers = ['Timestamp', 'User', 'Action', 'Target ID', 'Details'];
+    const rows = logs.map((l) => [
+      l.timestamp,
+      l.userName,
+      l.action,
+      l.targetId,
+      (l.details || '').replace(/"/g, '""'),
+    ]);
+    const csv = [headers.join(','), ...rows.map((r) => r.map((c) => `"${c}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `givegoa-audit-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -16,9 +39,9 @@ const AuditLog: React.FC = () => {
           <h2 className="text-2xl font-bold text-slate-900">Audit & Transparency</h2>
           <p className="text-slate-500">Chronological history of all major actions and resource allocations.</p>
         </div>
-        <button className="flex items-center gap-2 bg-white border px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-50">
+        <button onClick={exportToCsv} className="flex items-center gap-2 bg-white border px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-50">
           <i className="fa-solid fa-file-export"></i>
-          Export to Excel
+          Export to CSV
         </button>
       </div>
 

@@ -25,9 +25,7 @@ const RequestIntake: React.FC<RequestIntakeProps> = ({ user, onAdd, logAction })
     setLoading(true);
 
     try {
-      // 1. Get AI classification from backend
       const aiResult = await aiApi.classify(formData.title, formData.description);
-
       const body = {
         title: formData.title,
         description: formData.description,
@@ -42,12 +40,43 @@ const RequestIntake: React.FC<RequestIntakeProps> = ({ user, onAdd, logAction })
         requiredBudget: aiResult.estimatedBudget || 0,
         assignedVolunteers: [],
       };
-
       const newRequest = await requestsApi.create(body);
       await logAction(user, 'SUBMIT_REQUEST', newRequest.id, `Submitted request: ${newRequest.title}`);
       onAdd(newRequest);
-    } catch (err) {
-      alert("Submission failed. Please try again.");
+    } catch (err: any) {
+      alert(err?.message || 'Submission failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveDraft = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!formData.title.trim() || !formData.description.trim()) {
+      alert('Title and description are required for draft.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const body = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        urgency: formData.urgency,
+        beneficiaries: formData.beneficiaries,
+        location: formData.location,
+        status: RequestStatus.SUBMITTED,
+        priorityScore: 0,
+        aiClassificationConfidence: 0,
+        requiredBudget: 0,
+        assignedVolunteers: [],
+      };
+      const newRequest = await requestsApi.create(body);
+      await logAction(user, 'SAVE_DRAFT', newRequest.id, `Draft saved: ${newRequest.title}`);
+      onAdd(newRequest);
+      setFormData({ title: '', description: '', category: RequestCategory.UNCATEGORIZED, urgency: 'MEDIUM', beneficiaries: 0, location: '' });
+    } catch (err: any) {
+      alert(err?.message || 'Failed to save draft.');
     } finally {
       setLoading(false);
     }
@@ -123,7 +152,9 @@ const RequestIntake: React.FC<RequestIntakeProps> = ({ user, onAdd, logAction })
         </div>
 
         <div className="pt-4 flex justify-end gap-4">
-          <button type="button" className="px-6 py-3 font-semibold text-slate-600 hover:text-slate-800 transition-colors">Save Draft</button>
+          <button type="button" onClick={handleSaveDraft} disabled={loading} className="px-6 py-3 font-semibold text-slate-600 hover:text-slate-800 transition-colors disabled:opacity-50">
+            Save Draft
+          </button>
           <button 
             disabled={loading}
             type="submit" 

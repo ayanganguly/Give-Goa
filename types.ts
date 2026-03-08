@@ -54,6 +54,15 @@ export interface SocialRequest {
   requiredBudget: number;
   allocatedBudget?: number;
   assignedVolunteers: string[];
+  comments?: RequestComment[];
+}
+
+export interface RequestComment {
+  id: string;
+  userId: string;
+  userName: string;
+  text: string;
+  timestamp: string;
 }
 
 export interface ResourceItem {

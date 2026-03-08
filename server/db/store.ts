@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import type { SocialRequest, ResourceItem, AuditLogEntry, User, PriorityWeights } from '../types.js';
+import type { SocialRequest, ResourceItem, AuditLogEntry, User, PriorityWeights, ResourceUsageLog } from '../types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, '../../data');
@@ -11,6 +11,7 @@ const FILES = {
   resources: join(DATA_DIR, 'resources.json'),
   logs: join(DATA_DIR, 'logs.json'),
   weights: join(DATA_DIR, 'weights.json'),
+  resourceUsage: join(DATA_DIR, 'resourceUsage.json'),
 };
 
 function ensureDataDir() {
@@ -87,4 +88,10 @@ export const db = {
 
   getWeights: () => read<PriorityWeights>(FILES.weights, INITIAL_WEIGHTS),
   saveWeights: (weights: PriorityWeights) => write(FILES.weights, weights),
+
+  getResourceUsage: () => read<ResourceUsageLog[]>(FILES.resourceUsage, []),
+  appendResourceUsage: (entry: ResourceUsageLog) => {
+    const logs = read<ResourceUsageLog[]>(FILES.resourceUsage, []);
+    write(FILES.resourceUsage, [entry, ...logs]);
+  },
 };

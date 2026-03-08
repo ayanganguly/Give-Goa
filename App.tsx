@@ -38,6 +38,13 @@ const App: React.FC = () => {
     }
   }, []);
 
+  const allowedViews: Record<string, string[]> = {
+    ADMIN: ['dashboard', 'requests', 'intake', 'request-detail', 'resources', 'allocation', 'audit'],
+    PROJECT_MANAGER: ['dashboard', 'requests', 'intake', 'request-detail', 'resources', 'allocation'],
+    VOLUNTEER: ['dashboard', 'requests', 'request-detail'],
+    COMMUNITY_REQUESTER: ['intake'],
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('givegoa_token');
     const savedUser = localStorage.getItem('givegoa_session');
@@ -46,6 +53,7 @@ const App: React.FC = () => {
         .me()
         .then(({ user }) => {
           setUser(user as User);
+          setActiveView((v) => (allowedViews[user.role]?.includes(v) ? v : getDefaultView(user.role)));
           loadData();
         })
         .catch(() => {
@@ -58,8 +66,15 @@ const App: React.FC = () => {
     }
   }, [loadData]);
 
+  function getDefaultView(role: string) {
+    if (role === 'COMMUNITY_REQUESTER') return 'intake';
+    if (role === 'VOLUNTEER') return 'dashboard';
+    return 'dashboard';
+  }
+
   const handleLogin = (loggedInUser: { id: string; name: string; email: string; role: string }) => {
     setUser(loggedInUser as User);
+    setActiveView(getDefaultView(loggedInUser.role));
     loadData();
   };
 
@@ -94,6 +109,12 @@ const App: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (user && !allowedViews[user.role]?.includes(activeView)) {
+      setActiveView(getDefaultView(user.role));
+    }
+  }, [user, activeView]);
+
   const renderView = () => {
     if (!user) return <Login onLogin={handleLogin} />;
 
@@ -107,7 +128,7 @@ const App: React.FC = () => {
 
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard requests={requests} resources={resources} onSelectRequest={(id) => { setSelectedRequestId(id); setActiveView('request-detail'); }} />;
+        return <Dashboard requests={requests} resources={resources} onSelectRequest={(id) => { setSelectedRequestId(id); setActiveView('request-detail'); }} onViewAll={() => setActiveView('requests')} />;
       case 'requests':
         return <RequestList requests={requests} onSelectRequest={(id) => { setSelectedRequestId(id); setActiveView('request-detail'); }} />;
       case 'intake':
@@ -116,7 +137,7 @@ const App: React.FC = () => {
             user={user}
             onAdd={async (req) => {
               setRequests((prev) => [req, ...prev]);
-              setActiveView('requests');
+              if (user.role !== 'COMMUNITY_REQUESTER') setActiveView('requests');
             }}
             logAction={logAction}
           />
@@ -133,7 +154,7 @@ const App: React.FC = () => {
           />
         ) : null;
       case 'resources':
-        return <ResourceManager resources={resources} onUpdate={updateResources} user={user} />;
+        return <ResourceManager resources={resources} onUpdate={updateResources} onRefresh={loadData} user={user} />;
       case 'allocation':
         return (
           <AllocationEngine
@@ -142,13 +163,14 @@ const App: React.FC = () => {
             onAllocated={async (updatedRequests, updatedResources) => {
               await updateRequests(updatedRequests);
               await updateResources(updatedResources);
+              if (user) await logAction(user, 'APPLY_ALLOCATION', 'batch', `Allocated resources to ${updatedRequests.filter((r) => r.allocatedBudget).length} requests`);
             }}
           />
         );
       case 'audit':
         return <AuditLog />;
       default:
-        return <Dashboard requests={requests} resources={resources} onSelectRequest={(id) => { setSelectedRequestId(id); setActiveView('request-detail'); }} />;
+        return <Dashboard requests={requests} resources={resources} onSelectRequest={(id) => { setSelectedRequestId(id); setActiveView('request-detail'); }} onViewAll={() => setActiveView('requests')} />;
     }
   };
 

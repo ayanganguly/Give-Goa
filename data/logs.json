@@ -1,0 +1,20 @@
+[
+  {
+    "id": "1772976361913",
+    "timestamp": "2026-03-08T13:26:01.913Z",
+    "userId": "u1",
+    "userName": "Admin User",
+    "action": "UPDATE_STATUS",
+    "targetId": "1772976338176",
+    "details": "Updated status to REJECTED"
+  },
+  {
+    "id": "1772976338191",
+    "timestamp": "2026-03-08T13:25:38.191Z",
+    "userId": "u1",
+    "userName": "Admin User",
+    "action": "SUBMIT_REQUEST",
+    "targetId": "1772976338176",
+    "details": "Submitted request: dssdd"
+  }
+]

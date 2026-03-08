@@ -49,7 +49,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, role }) =>
         <div className="hidden md:block bg-blue-900/50 p-4 rounded-xl border border-blue-700/50">
           <p className="text-xs text-blue-300 mb-1 font-semibold uppercase tracking-wider">Help & Support</p>
           <p className="text-sm text-white">Need assistance with allocation?</p>
-          <button className="mt-2 text-xs font-bold text-rotary-gold hover:underline">Contact Admin</button>
+          <a href="mailto:admin@rotarypanjim.org" className="mt-2 inline-block text-xs font-bold text-rotary-gold hover:underline">
+            Contact Admin
+          </a>
         </div>
       </div>
     </div>

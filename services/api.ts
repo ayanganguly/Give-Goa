@@ -69,11 +69,30 @@ export const requestsApi = {
       method: 'PUT',
       body: JSON.stringify({ requests }),
     }),
+  addComment: (id: string, text: string) =>
+    fetchApi<import('../types').RequestComment>(`/requests/${id}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    }),
 };
 
 // Resources
 export const resourcesApi = {
   getAll: () => fetchApi<{ resources: import('../types').ResourceItem[] }>('/resources'),
+  add: (body: { name: string; type: string; quantity: number; unit?: string }) =>
+    fetchApi<import('../types').ResourceItem>('/resources', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  restock: (id: string, amount: number, details?: string) =>
+    fetchApi<import('../types').ResourceItem>(`/resources/${id}/restock`, {
+      method: 'PATCH',
+      body: JSON.stringify({ amount, details }),
+    }),
+  getUsage: (id: string) =>
+    fetchApi<{ logs: { id: string; action: string; amount: number; userName: string; timestamp: string; details?: string }[] }>(
+      `/resources/${id}/usage`
+    ),
   update: (resources: import('../types').ResourceItem[]) =>
     fetchApi<{ ok: boolean }>('/resources', {
       method: 'PUT',

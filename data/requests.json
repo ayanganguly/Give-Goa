@@ -1,0 +1,41 @@
+[
+  {
+    "id": "1772976338176",
+    "trackingId": "RG-2026-7070",
+    "title": "dssdd",
+    "description": "ssdfcsdfsd",
+    "category": "UNCATEGORIZED",
+    "urgency": "MEDIUM",
+    "beneficiaries": 1,
+    "location": "22adscdcs",
+    "status": "REJECTED",
+    "createdAt": "2026-03-08T13:25:38.176Z",
+    "submittedBy": "Admin User",
+    "priorityScore": 0,
+    "aiClassificationConfidence": 0,
+    "aiReasoning": "AI analysis failed.",
+    "requiredBudget": 0,
+    "assignedVolunteers": []
+  },
+  {
+    "id": "req1",
+    "trackingId": "RG-2024-001",
+    "title": "Rural School Solar Power",
+    "description": "Provide solar lighting for the Govt Primary School in Valpoi to allow evening study sessions.",
+    "category": "EDUCATION",
+    "urgency": "HIGH",
+    "beneficiaries": 120,
+    "location": "Valpoi, Sattari",
+    "status": "IN_PROGRESS",
+    "createdAt": "2026-03-08T13:19:19.738Z",
+    "submittedBy": "Village Council Valpoi",
+    "priorityScore": 85,
+    "aiClassificationConfidence": 0.98,
+    "requiredBudget": 150000,
+    "allocatedBudget": 150000,
+    "assignedVolunteers": [
+      "v1",
+      "v2"
+    ]
+  }
+]

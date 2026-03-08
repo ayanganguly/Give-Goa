@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { SocialRequest, RequestStatus, User, UserRole } from '../types';
-import { aiApi, weightsApi } from '../services/api';
+import { SocialRequest, RequestStatus, User, UserRole, RequestComment } from '../types';
+import { aiApi, weightsApi, requestsApi } from '../services/api';
 
 interface RequestDetailProps {
   request: SocialRequest;
@@ -13,6 +13,23 @@ interface RequestDetailProps {
 
 const RequestDetail: React.FC<RequestDetailProps> = ({ request, user, onUpdate, onBack, logAction }) => {
   const [scoring, setScoring] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [postingComment, setPostingComment] = useState(false);
+  const comments = request.comments || [];
+
+  const handlePostComment = async () => {
+    if (!commentText.trim()) return;
+    setPostingComment(true);
+    try {
+      const newComment = await requestsApi.addComment(request.id, commentText.trim());
+      onUpdate({ ...request, comments: [...comments, newComment] });
+      setCommentText('');
+    } catch (err: any) {
+      alert(err?.message || 'Failed to post comment');
+    } finally {
+      setPostingComment(false);
+    }
+  };
 
   const handleScore = async () => {
     setScoring(true);
@@ -97,38 +114,42 @@ const RequestDetail: React.FC<RequestDetailProps> = ({ request, user, onUpdate, 
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
             <h3 className="font-bold text-slate-900 mb-4">Management Actions</h3>
             <div className="space-y-3">
-              {request.status === RequestStatus.CLASSIFIED && (
-                <button 
-                  disabled={scoring}
-                  onClick={handleScore}
-                  className="w-full bg-rotary-gold text-rotary-blue font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-yellow-400 transition-all shadow-md"
-                >
-                  {scoring ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-calculator"></i>}
-                  Run Impact Scoring
-                </button>
-              )}
-              
-              {request.status === RequestStatus.PRIORITIZED && user.role === UserRole.ADMIN && (
-                <button 
-                  onClick={() => updateStatus(RequestStatus.APPROVED)}
-                  className="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition-all shadow-md"
-                >
-                  Approve for Funding
-                </button>
-              )}
+              {(user.role === UserRole.ADMIN || user.role === UserRole.PROJECT_MANAGER) && (
+                <>
+                  {request.status === RequestStatus.CLASSIFIED && (
+                    <button 
+                      disabled={scoring}
+                      onClick={handleScore}
+                      className="w-full bg-rotary-gold text-rotary-blue font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-yellow-400 transition-all shadow-md"
+                    >
+                      {scoring ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-calculator"></i>}
+                      Run Impact Scoring
+                    </button>
+                  )}
+                  
+                  {request.status === RequestStatus.PRIORITIZED && (
+                    <button 
+                      onClick={() => updateStatus(RequestStatus.APPROVED)}
+                      className="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition-all shadow-md"
+                    >
+                      Approve for Funding
+                    </button>
+                  )}
 
-              {request.status === RequestStatus.APPROVED && user.role === UserRole.ADMIN && (
-                <div className="p-3 bg-blue-50 text-blue-700 text-sm rounded-xl text-center italic font-medium">
-                  Approved. Waiting for resource allocation cycle.
-                </div>
-              )}
+                  {request.status === RequestStatus.APPROVED && (
+                    <div className="p-3 bg-blue-50 text-blue-700 text-sm rounded-xl text-center italic font-medium">
+                      Approved. Waiting for resource allocation cycle.
+                    </div>
+                  )}
 
-              <button 
-                onClick={() => updateStatus(RequestStatus.REJECTED)}
-                className="w-full bg-slate-100 text-slate-600 font-semibold py-3 rounded-xl hover:bg-slate-200 transition-all"
-              >
-                Reject Request
-              </button>
+                  <button 
+                    onClick={() => updateStatus(RequestStatus.REJECTED)}
+                    className="w-full bg-slate-100 text-slate-600 font-semibold py-3 rounded-xl hover:bg-slate-200 transition-all"
+                  >
+                    Reject Request
+                  </button>
+                </>
+              )}
             </div>
 
             <div className="mt-8 pt-8 border-t border-slate-100">
@@ -144,18 +165,32 @@ const RequestDetail: React.FC<RequestDetailProps> = ({ request, user, onUpdate, 
 
           <div className="bg-white p-6 rounded-2xl border shadow-sm">
             <h4 className="font-bold text-slate-800 mb-4">Internal Discussion</h4>
-            <div className="space-y-4 mb-4">
-              <div className="bg-slate-50 p-3 rounded-lg text-sm">
-                <p className="font-bold text-xs mb-1 text-slate-400">ADMIN • 2 days ago</p>
-                <p className="text-slate-600">Great alignment with our literacy focus. Let's confirm location details.</p>
-              </div>
+            <div className="space-y-4 mb-4 max-h-48 overflow-y-auto">
+              {comments.length === 0 ? (
+                <p className="text-sm text-slate-400 italic">No comments yet.</p>
+              ) : (
+                comments.map((c: RequestComment) => (
+                  <div key={c.id} className="bg-slate-50 p-3 rounded-lg text-sm">
+                    <p className="font-bold text-xs mb-1 text-slate-400">{c.userName} • {new Date(c.timestamp).toLocaleDateString()}</p>
+                    <p className="text-slate-600">{c.text}</p>
+                  </div>
+                ))
+              )}
             </div>
-            <textarea 
+            <textarea
               rows={2}
               className="w-full p-3 text-sm bg-white border border-slate-200 text-slate-900 rounded-xl outline-none focus:border-rotary-blue transition-all"
               placeholder="Add a comment..."
-            ></textarea>
-            <button className="mt-2 w-full bg-slate-100 text-slate-600 py-2 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors uppercase tracking-wider">Post Comment</button>
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+            />
+            <button
+              onClick={handlePostComment}
+              disabled={postingComment || !commentText.trim()}
+              className="mt-2 w-full bg-slate-100 text-slate-600 py-2 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors uppercase tracking-wider disabled:opacity-50"
+            >
+              {postingComment ? 'Posting...' : 'Post Comment'}
+            </button>
           </div>
         </div>
       </div>

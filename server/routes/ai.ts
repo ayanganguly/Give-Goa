@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
+import { requireRole } from '../middleware/requireRole.js';
 import { db } from '../db/store.js';
 import * as gemini from '../services/gemini.js';
 
 const router = Router();
 router.use(requireAuth);
 
-router.post('/classify', async (req, res) => {
+// Classify - anyone who can submit
+router.post('/classify', requireRole('ADMIN', 'PROJECT_MANAGER', 'COMMUNITY_REQUESTER'), async (req, res) => {
   const { title, description } = req.body;
   if (!title || !description) {
     res.status(400).json({ error: 'title and description required' });
@@ -21,7 +23,8 @@ router.post('/classify', async (req, res) => {
   }
 });
 
-router.post('/score', async (req, res) => {
+// Score - ADMIN, PM only
+router.post('/score', requireRole('ADMIN', 'PROJECT_MANAGER'), async (req, res) => {
   const { request } = req.body;
   if (!request) {
     res.status(400).json({ error: 'request required' });
@@ -37,7 +40,8 @@ router.post('/score', async (req, res) => {
   }
 });
 
-router.post('/allocate', async (req, res) => {
+// Allocate - ADMIN, PM only
+router.post('/allocate', requireRole('ADMIN', 'PROJECT_MANAGER'), async (req, res) => {
   const { requests, resources } = req.body;
   if (!requests || !resources) {
     res.status(400).json({ error: 'requests and resources required' });

@@ -9,9 +9,10 @@ interface DashboardProps {
   requests: SocialRequest[];
   resources: ResourceItem[];
   onSelectRequest: (id: string) => void;
+  onViewAll?: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ requests, resources, onSelectRequest }) => {
+const Dashboard: React.FC<DashboardProps> = ({ requests, resources, onSelectRequest, onViewAll }) => {
   const stats = useMemo(() => {
     const totalRequests = requests.length;
     const pendingRequests = requests.filter(r => r.status === RequestStatus.SUBMITTED || r.status === RequestStatus.CLASSIFIED).length;
@@ -89,7 +90,9 @@ const Dashboard: React.FC<DashboardProps> = ({ requests, resources, onSelectRequ
       <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
         <div className="p-6 border-b flex justify-between items-center">
           <h3 className="text-lg font-bold text-slate-800">Recent High Priority Requests</h3>
-          <button className="text-sm font-semibold text-rotary-blue hover:underline">View All</button>
+          <button onClick={onViewAll} className="text-sm font-semibold text-rotary-blue hover:underline">
+            View All
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
