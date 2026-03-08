@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:server": "cd server && npm run dev",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -15,6 +17,7 @@
     "recharts": "^3.7.0"
   },
   "devDependencies": {
+    "concurrently": "^9.1.0",
     "@tailwindcss/vite": "^4.1.18",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",

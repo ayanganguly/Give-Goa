@@ -1,12 +1,12 @@
 
 import React, { useState } from 'react';
 import { SocialRequest, ResourceItem, RequestStatus } from '../types';
-import { suggestAllocations } from '../services/gemini';
+import { aiApi } from '../services/api';
 
 interface AllocationEngineProps {
   requests: SocialRequest[];
   resources: ResourceItem[];
-  onAllocated: (reqs: SocialRequest[], res: ResourceItem[]) => void;
+  onAllocated: (reqs: SocialRequest[], res: ResourceItem[]) => void | Promise<void>;
 }
 
 const AllocationEngine: React.FC<AllocationEngineProps> = ({ requests, resources, onAllocated }) => {
@@ -15,38 +15,41 @@ const AllocationEngine: React.FC<AllocationEngineProps> = ({ requests, resources
 
   const runOptimizer = async () => {
     setLoading(true);
-    const result = await suggestAllocations(requests, resources);
-    setSuggestion(result);
-    setLoading(false);
+    try {
+      const result = await aiApi.allocate(requests, resources);
+      setSuggestion(result);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const applyOptimization = () => {
+  const applyOptimization = async () => {
     if (!suggestion) return;
 
-    const updatedRequests = requests.map(req => {
+    const updatedRequests = requests.map((req) => {
       const allocation = suggestion.allocations.find((a: any) => a.requestId === req.id);
       if (allocation) {
         return {
           ...req,
           allocatedBudget: allocation.allocatedAmount,
           status: allocation.allocatedAmount >= req.requiredBudget ? RequestStatus.FUNDED : req.status,
-          aiReasoning: allocation.reason
+          aiReasoning: allocation.reason,
         };
       }
       return req;
     });
 
-    const budgetRes = resources.find(r => r.type === 'BUDGET');
-    const updatedResources = resources.map(res => {
+    const budgetRes = resources.find((r) => r.type === 'BUDGET');
+    const updatedResources = resources.map((res) => {
       if (res.type === 'BUDGET' && budgetRes) {
-        return { ...res, available: res.available - (budgetRes.available - suggestion.remainingBudget) };
+        return { ...res, available: suggestion.remainingBudget };
       }
       return res;
     });
 
-    onAllocated(updatedRequests, updatedResources);
+    await onAllocated(updatedRequests, updatedResources);
     setSuggestion(null);
-    alert("Resource allocation applied successfully!");
+    alert('Resource allocation applied successfully!');
   };
 
   const pending = requests.filter(r => r.status === RequestStatus.PRIORITIZED);

@@ -1,21 +1,21 @@
 
 import React, { useState } from 'react';
 import { User, RequestCategory, SocialRequest, RequestStatus } from '../types';
-import { classifyRequest } from '../services/gemini';
-import { logAction } from '../services/store';
+import { aiApi, requestsApi } from '../services/api';
 
 interface RequestIntakeProps {
   user: User;
   onAdd: (request: SocialRequest) => void;
+  logAction: (user: User, action: string, targetId: string, details: string) => void | Promise<void>;
 }
 
-const RequestIntake: React.FC<RequestIntakeProps> = ({ user, onAdd }) => {
+const RequestIntake: React.FC<RequestIntakeProps> = ({ user, onAdd, logAction }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     category: RequestCategory.UNCATEGORIZED,
-    urgency: 'MEDIUM' as any,
+    urgency: 'MEDIUM' as const,
     beneficiaries: 0,
     location: '',
   });
@@ -25,29 +25,26 @@ const RequestIntake: React.FC<RequestIntakeProps> = ({ user, onAdd }) => {
     setLoading(true);
 
     try {
-      // 1. Get AI classification and insights
-      const aiResult = await classifyRequest(formData.title, formData.description);
-      
-      const newRequest: SocialRequest = {
-        id: Date.now().toString(),
-        trackingId: `RG-${new Date().getFullYear()}-${Math.floor(Math.random() * 9000) + 1000}`,
+      // 1. Get AI classification from backend
+      const aiResult = await aiApi.classify(formData.title, formData.description);
+
+      const body = {
         title: formData.title,
         description: formData.description,
-        category: aiResult.category as RequestCategory,
-        urgency: aiResult.suggestedUrgency || formData.urgency,
+        category: (aiResult.category as RequestCategory) || RequestCategory.UNCATEGORIZED,
+        urgency: (aiResult.suggestedUrgency as SocialRequest['urgency']) || formData.urgency,
         beneficiaries: formData.beneficiaries,
         location: formData.location,
         status: RequestStatus.CLASSIFIED,
-        createdAt: new Date().toISOString(),
-        submittedBy: user.name,
-        priorityScore: 0, // Calculated later
+        priorityScore: 0,
         aiClassificationConfidence: aiResult.confidence,
         aiReasoning: aiResult.reasoning,
         requiredBudget: aiResult.estimatedBudget || 0,
-        assignedVolunteers: []
+        assignedVolunteers: [],
       };
 
-      logAction(user, 'SUBMIT_REQUEST', newRequest.id, `Submitted request: ${newRequest.title}`);
+      const newRequest = await requestsApi.create(body);
+      await logAction(user, 'SUBMIT_REQUEST', newRequest.id, `Submitted request: ${newRequest.title}`);
       onAdd(newRequest);
     } catch (err) {
       alert("Submission failed. Please try again.");

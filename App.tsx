@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { User, UserRole, SocialRequest, ResourceItem, AuditLogEntry } from './types';
-import { MOCK_USERS, APP_NAME, CLUB_NAME } from './constants';
-import { getStore, saveRequests, saveResources, logAction } from './services/store';
+import { User, SocialRequest, ResourceItem } from './types';
+import { authApi, requestsApi, resourcesApi, logsApi } from './services/api';
 
 // Components
 import Sidebar from './components/Sidebar';
@@ -22,44 +21,89 @@ const App: React.FC = () => {
   const [resources, setResources] = useState<ResourceItem[]>([]);
   const [activeView, setActiveView] = useState<string>('dashboard');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Initial data load
-    const data = getStore();
-    setRequests(data.requests);
-    setResources(data.resources);
-
-    // Check session
-    const savedUser = localStorage.getItem('givegoa_session');
-    if (savedUser) setUser(JSON.parse(savedUser));
+  const loadData = useCallback(async () => {
+    try {
+      const [reqRes, resRes] = await Promise.all([
+        requestsApi.getAll(),
+        resourcesApi.getAll(),
+      ]);
+      setRequests(reqRes.requests);
+      setResources(resRes.resources);
+    } catch (err) {
+      console.error('Failed to load data:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const handleLogin = (email: string) => {
-    const found = MOCK_USERS.find(u => u.email === email);
-    if (found) {
-      const u: User = { id: found.id, name: found.name, email: found.email, role: found.role };
-      setUser(u);
-      localStorage.setItem('givegoa_session', JSON.stringify(u));
+  useEffect(() => {
+    const token = localStorage.getItem('givegoa_token');
+    const savedUser = localStorage.getItem('givegoa_session');
+    if (token && savedUser) {
+      authApi
+        .me()
+        .then(({ user }) => {
+          setUser(user as User);
+          loadData();
+        })
+        .catch(() => {
+          localStorage.removeItem('givegoa_token');
+          localStorage.removeItem('givegoa_session');
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
     }
+  }, [loadData]);
+
+  const handleLogin = (loggedInUser: { id: string; name: string; email: string; role: string }) => {
+    setUser(loggedInUser as User);
+    loadData();
   };
 
   const handleLogout = () => {
     setUser(null);
+    localStorage.removeItem('givegoa_token');
     localStorage.removeItem('givegoa_session');
+    setRequests([]);
+    setResources([]);
   };
 
-  const updateRequests = (newRequests: SocialRequest[]) => {
+  const updateRequests = async (newRequests: SocialRequest[]) => {
     setRequests(newRequests);
-    saveRequests(newRequests);
+    await requestsApi.batchUpdate(newRequests);
   };
 
-  const updateResources = (newResources: ResourceItem[]) => {
+  const updateSingleRequest = async (updated: SocialRequest) => {
+    await requestsApi.update(updated.id, updated);
+    setRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+  };
+
+  const updateResources = async (newResources: ResourceItem[]) => {
     setResources(newResources);
-    saveResources(newResources);
+    await resourcesApi.update(newResources);
+  };
+
+  const logAction = async (user: User, action: string, targetId: string, details: string) => {
+    try {
+      await logsApi.create(action, targetId, details);
+    } catch (e) {
+      console.error('Log failed:', e);
+    }
   };
 
   const renderView = () => {
     if (!user) return <Login onLogin={handleLogin} />;
+
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <i className="fa-solid fa-spinner fa-spin text-4xl text-rotary-blue"></i>
+        </div>
+      );
+    }
 
     switch (activeView) {
       case 'dashboard':
@@ -67,22 +111,40 @@ const App: React.FC = () => {
       case 'requests':
         return <RequestList requests={requests} onSelectRequest={(id) => { setSelectedRequestId(id); setActiveView('request-detail'); }} />;
       case 'intake':
-        return <RequestIntake user={user} onAdd={(req) => { updateRequests([req, ...requests]); setActiveView('requests'); }} />;
+        return (
+          <RequestIntake
+            user={user}
+            onAdd={async (req) => {
+              setRequests((prev) => [req, ...prev]);
+              setActiveView('requests');
+            }}
+            logAction={logAction}
+          />
+        );
       case 'request-detail':
-        const req = requests.find(r => r.id === selectedRequestId);
-        return req ? <RequestDetail 
-          request={req} 
-          user={user} 
-          onUpdate={(updated) => updateRequests(requests.map(r => r.id === updated.id ? updated : r))}
-          onBack={() => setActiveView('requests')}
-        /> : null;
+        const req = requests.find((r) => r.id === selectedRequestId);
+        return req ? (
+          <RequestDetail
+            request={req}
+            user={user}
+            onUpdate={(updated) => updateSingleRequest(updated)}
+            onBack={() => setActiveView('requests')}
+            logAction={logAction}
+          />
+        ) : null;
       case 'resources':
         return <ResourceManager resources={resources} onUpdate={updateResources} user={user} />;
       case 'allocation':
-        return <AllocationEngine requests={requests} resources={resources} onAllocated={(updatedRequests, updatedResources) => {
-          updateRequests(updatedRequests);
-          updateResources(updatedResources);
-        }} />;
+        return (
+          <AllocationEngine
+            requests={requests}
+            resources={resources}
+            onAllocated={async (updatedRequests, updatedResources) => {
+              await updateRequests(updatedRequests);
+              await updateResources(updatedResources);
+            }}
+          />
+        );
       case 'audit':
         return <AuditLog />;
       default:
@@ -93,10 +155,10 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden">
       {user && (
-        <Sidebar 
-          activeView={activeView} 
-          setActiveView={setActiveView} 
-          role={user.role} 
+        <Sidebar
+          activeView={activeView}
+          setActiveView={setActiveView}
+          role={user.role}
         />
       )}
       <div className="flex-1 flex flex-col min-w-0">

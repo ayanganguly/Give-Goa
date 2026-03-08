@@ -1,8 +1,13 @@
 
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
+import { logsApi } from '../services/api';
 
 const AuditLog: React.FC = () => {
-  const logs = useMemo(() => JSON.parse(localStorage.getItem('givegoa_logs') || '[]'), []);
+  const [logs, setLogs] = useState<any[]>([]);
+
+  useEffect(() => {
+    logsApi.getAll().then((res) => setLogs(res.logs)).catch(() => setLogs([]));
+  }, []);
 
   return (
     <div className="space-y-6">

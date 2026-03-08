@@ -1,34 +1,35 @@
 
 import React, { useState } from 'react';
 import { SocialRequest, RequestStatus, User, UserRole } from '../types';
-import { calculatePriorityScore } from '../services/gemini';
-import { logAction, getStore } from '../services/store';
+import { aiApi, weightsApi } from '../services/api';
 
 interface RequestDetailProps {
   request: SocialRequest;
   user: User;
   onUpdate: (request: SocialRequest) => void;
   onBack: () => void;
+  logAction: (user: User, action: string, targetId: string, details: string) => void | Promise<void>;
 }
 
-const RequestDetail: React.FC<RequestDetailProps> = ({ request, user, onUpdate, onBack }) => {
+const RequestDetail: React.FC<RequestDetailProps> = ({ request, user, onUpdate, onBack, logAction }) => {
   const [scoring, setScoring] = useState(false);
 
   const handleScore = async () => {
     setScoring(true);
-    const { weights } = getStore();
-    const result = await calculatePriorityScore(request, weights);
-    
-    const updated = {
-      ...request,
-      priorityScore: result.score,
-      aiReasoning: result.breakdown,
-      status: RequestStatus.PRIORITIZED
-    };
-    
-    logAction(user, 'SCORE_REQUEST', request.id, `Calculated priority score: ${result.score}`);
-    onUpdate(updated);
-    setScoring(false);
+    try {
+      const weights = await weightsApi.get();
+      const result = await aiApi.score(request);
+      const updated = {
+        ...request,
+        priorityScore: result.score,
+        aiReasoning: result.breakdown,
+        status: RequestStatus.PRIORITIZED,
+      };
+      await logAction(user, 'SCORE_REQUEST', request.id, `Calculated priority score: ${result.score}`);
+      onUpdate(updated);
+    } finally {
+      setScoring(false);
+    }
   };
 
   const updateStatus = (status: RequestStatus) => {
