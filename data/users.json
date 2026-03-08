@@ -1,0 +1,30 @@
+[
+  {
+    "id": "u1",
+    "name": "Admin User",
+    "email": "admin@rotarypanjim.org",
+    "password": "password",
+    "role": "ADMIN"
+  },
+  {
+    "id": "u2",
+    "name": "PM John",
+    "email": "pm@rotarypanjim.org",
+    "password": "password",
+    "role": "PROJECT_MANAGER"
+  },
+  {
+    "id": "u3",
+    "name": "Volunteer Jane",
+    "email": "jane@volunteer.org",
+    "password": "password",
+    "role": "VOLUNTEER"
+  },
+  {
+    "id": "u4",
+    "name": "Community Member",
+    "email": "member@goa.com",
+    "password": "password",
+    "role": "COMMUNITY_REQUESTER"
+  }
+]
